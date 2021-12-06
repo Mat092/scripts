@@ -87,9 +87,7 @@ def merge_dataset(datafiles, last_datetime_recorded):
             dataset_list.append(daily_data)
 
     if dataset_list:
-        new_data = pd.concat(dataset_list)
-
-        return new_data
+        return pd.concat(dataset_list)
 
     else:
         raise ValueError('No New Data to add, leaving everything untouched')
@@ -107,14 +105,8 @@ def extract_date_from_path(filename):
         return date_list[0]
 
     else:
+        print(filename)
         raise ValueError('Not all dates in files are the same, check the number of variables')
-
-
-def separate_filename_by_date(datafiles, nmb_of_vars=8):
-
-    sep = [list(datafiles[i: i + nmb_of_vars]) for i in range(0, len(datafiles), nmb_of_vars)]
-
-    return sep
 
 
 def main():
@@ -140,14 +132,20 @@ def main():
     OUTDIR = args.outdir if args.outdir else INDIR
     APPEND = glob(os.path.join(INDIR, '*_pisa.csv'))
 
+    # INDIR = '../OneDrive/R37_SENSORI/DATI PISA/'
+    # OUTDIR = INDIR
+    # APPEND = glob(os.path.join(INDIR, '*_pisa.csv'))
+
     if os.path.exists(INDIR):
-        datafiles = sorted(glob(os.path.join(INDIR, '**', '*.HTML'), recursive=True))
 
-        if len(datafiles) % 8 != 0:
-            raise ValueError(f'The number of datafiles is not a multiple of 8 but its {len(datafiles)}')
+        dir_list = []
+        for name, dirs, files in sorted(os.walk(INDIR)):
+            if len(files) != 8:
+                print(f'WARNING: dir {name} has {len(files)} files instead of 8, skipping')
+                continue
 
-        else:
-            datafiles = separate_filename_by_date(datafiles)
+            else:
+                dir_list.append([os.path.join(name, f) for f in files])
 
     else:
         raise ValueError(f'path {INDIR} does not exist')
@@ -166,7 +164,7 @@ def main():
 
     # MERGE the datasets for all the commons columns
     tic = now()
-    new_data = merge_dataset(datafiles, last_datetime_recorded)
+    new_data = merge_dataset(dir_list, last_datetime_recorded)
     toc = now()
 
     full_data = pd.concat([old_data, new_data])
@@ -185,7 +183,7 @@ def main():
     # Scrivo il nome e salva il dataset
     full_data.to_csv(name)
 
-    print('\n', f'Finished Merging {len(datafiles)} datasets in {toc-tic:.4}s. Saved to {OUTDIR}/')
+    print('\n', f'Finished Merging {len(dir_list)} datasets in {toc-tic:.4}s. Saved to {OUTDIR}/')
 
 
 if __name__ == '__main__':
